@@ -5,12 +5,13 @@ function App() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const API_URL = process.env.REACT_APP_API_URL;
 
   const handleSearch = async () => {
     if (!query) return;
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/search", {
+      const res = await fetch(`${API_URL}/search`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: query })
