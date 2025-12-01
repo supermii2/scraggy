@@ -17,7 +17,7 @@ function App() {
         body: JSON.stringify({ text: query })
       });
       const data = await res.json();
-      setResults(data.results);
+      setResults(data.results || []);
     } catch (err) {
       console.error("Search error:", err);
     } finally {
@@ -38,12 +38,10 @@ function App() {
           className="search-input"
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
         />
-        <button onClick={handleSearch} className="search-button">
-          Search
+        <button onClick={handleSearch} className="search-button" disabled={loading}>
+          {loading ? "Searching..." : "Search"}
         </button>
       </div>
-
-      {loading && <p className="loading">Searching...</p>}
 
       <ul className="results-list">
         {results.map((r, i) => (
@@ -55,6 +53,17 @@ function App() {
           </li>
         ))}
       </ul>
+      <footer className="footer">
+        <p>
+          <br />Note: Regional Forms have no been implemented because the API used doesn't provide them.
+        </p>
+        <p>
+          Visit my website:{" "}
+          <a href="https://salving.net" target="_blank" rel="noopener noreferrer">
+            https://salving.net
+          </a>
+        </p>
+      </footer>
     </div>
   );
 }
