@@ -23,12 +23,12 @@ def fetch_flavor_texts(pokemon_id, entries = []):
     try:
         url = f"https://pokeapi.co/api/v2/pokemon-species/{pokemon_id}"
         data = requests.get(url).json()
-
+        name = data["name"]
         for entry in data["flavor_text_entries"]:
             if entry["language"]["name"] == "en":
                 text = entry["flavor_text"]
                 text = text.replace("\n", " ").replace("\f", " ").strip()
-                entries.append([pokemon_id, text])
+                entries.append([pokemon_id, text, name])
     except:
         print(f"Failed to retrieve id: {pokemon_id}")
 
@@ -40,7 +40,7 @@ def fetch_all_flavor_texts(entries = []):
 def get_embedding_for_entries(entries):
     embeddings_data = []
 
-    for poke_id, text in entries:
+    for poke_id, text, name in entries:
         print(text)
         response = client.embeddings.create(
             model=EMBED_MODEL,
@@ -50,7 +50,8 @@ def get_embedding_for_entries(entries):
         embeddings_data.append({
             "id": poke_id,
             "text": text,
-            "embedding": embedding
+            "embedding": embedding,
+            "name": name
         })
     return embeddings_data
 
@@ -107,7 +108,7 @@ def save_faiss_and_metadata(embeddings_data, faiss_file="embeddings.faiss", meta
     faiss.write_index(index, faiss_file)
     print(f"Saved FAISS index to {faiss_file}")
 
-    metadata = {i: {"id": embeddings_data[i]["id"], "text": embeddings_data[i]["text"]} for i in range(len(embeddings_data))}
+    metadata = {i: {"id": embeddings_data[i]["id"], "text": embeddings_data[i]["text"], "name": embeddings_data[i]["name"]} for i in range(len(embeddings_data))}
     with open(metadata_file, "w", encoding="utf-8") as f:
         json.dump(metadata, f, ensure_ascii=False, indent=2)
     print(f"Saved metadata to {metadata_file}")
