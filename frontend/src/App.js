@@ -48,7 +48,7 @@ function App() {
       <ul className="results-list">
         {results.map((r, i) => (
           <li key={i} className="result-item">
-            <b>Pokémon ID {r.id}</b>: {r.text}
+            <b>{r.name}</b>: {r.text}
             <div className="result-distance">
               Distance: {r.distance.toFixed(3)}
             </div>

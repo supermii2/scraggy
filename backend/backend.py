@@ -56,6 +56,7 @@ def search(query: Query):
         results.append({
             "id": entry["id"],
             "text": entry["text"],
+            "name": entry["name"],
             "distance": float(dist)
         })
 
