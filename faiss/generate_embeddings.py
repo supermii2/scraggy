@@ -6,6 +6,8 @@ import os
 import numpy as np
 import faiss
 from sklearn.metrics.pairwise import cosine_similarity
+import argparse
+import csv
 
 load_dotenv()
 
@@ -19,8 +21,9 @@ if not api_key:
 
 client = OpenAI(api_key=api_key)
 
-def fetch_flavor_texts(pokemon_id, entries = []):
+def fetch_flavor_texts(pokemon_id):
     try:
+        entries = []
         url = f"https://pokeapi.co/api/v2/pokemon-species/{pokemon_id}"
         data = requests.get(url).json()
         name = data["name"]
@@ -28,7 +31,9 @@ def fetch_flavor_texts(pokemon_id, entries = []):
             if entry["language"]["name"] == "en":
                 text = entry["flavor_text"]
                 text = text.replace("\n", " ").replace("\f", " ").strip()
-                entries.append([pokemon_id, text, name])
+                entries.append([name, text])
+
+        return entries
     except:
         print(f"Failed to retrieve id: {pokemon_id}")
 
@@ -38,9 +43,10 @@ def fetch_all_flavor_texts(entries = []):
         fetch_flavor_texts(n, entries)
 
 def get_embedding_for_entries(entries):
+    print(">>> Generating Embeddings")
     embeddings_data = []
 
-    for poke_id, text, name in entries:
+    for name, text in entries:
         print(text)
         response = client.embeddings.create(
             model=EMBED_MODEL,
@@ -48,7 +54,6 @@ def get_embedding_for_entries(entries):
         )
         embedding = response.data[0].embedding
         embeddings_data.append({
-            "id": poke_id,
             "text": text,
             "embedding": embedding,
             "name": name
@@ -62,11 +67,11 @@ def remove_similar_embeddings(embeddings_data, threshold=SIM_THRESHOLD):
     from collections import defaultdict
     grouped = defaultdict(list)
     for i, item in enumerate(embeddings_data):
-        grouped[item["id"]].append((i, item))
+        grouped[item["name"]].append((i, item))
 
     keep_indices = []
 
-    for poke_id, items in grouped.items():
+    for name, items in grouped.items():
         # Reverse items so newest embeddings come first
         items = items[::-1]
 
@@ -108,14 +113,37 @@ def save_faiss_and_metadata(embeddings_data, faiss_file="embeddings.faiss", meta
     faiss.write_index(index, faiss_file)
     print(f"Saved FAISS index to {faiss_file}")
 
-    metadata = {i: {"id": embeddings_data[i]["id"], "text": embeddings_data[i]["text"], "name": embeddings_data[i]["name"]} for i in range(len(embeddings_data))}
+    metadata = {i: {"text": embeddings_data[i]["text"], "name": embeddings_data[i]["name"]} for i in range(len(embeddings_data))}
     with open(metadata_file, "w", encoding="utf-8") as f:
         json.dump(metadata, f, ensure_ascii=False, indent=2)
     print(f"Saved metadata to {metadata_file}")
 
+def load_local_data(path):
+    rows = []
+    with open(path, newline='', encoding='cp1252') as f:
+        reader = csv.reader(f)
+        for row in reader:
+            rows.append(row)
+    return rows
+
 if __name__ == "__main__":
-    entries = []
-    fetch_all_flavor_texts(entries)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "source",
+        nargs="?",
+        help="Optional JSON file containing entries instead of fetching remotely."
+    )
+    args = parser.parse_args()
+
+    if args.source:
+        print(f">> Loading entries from local file: {args.source}")
+        entries = load_local_data(args.source)
+
+    else:
+        print(">> Fetching all flavor texts from API")
+        entries = fetch_all_flavor_texts()
+
 
     embeddings = get_embedding_for_entries(entries)
     embeddings = remove_similar_embeddings(embeddings, threshold=SIM_THRESHOLD)
