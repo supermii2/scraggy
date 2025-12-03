@@ -54,7 +54,6 @@ def search(query: Query):
             continue
         entry = metadata[str(idx)]
         results.append({
-            "id": entry["id"],
             "text": entry["text"],
             "name": entry["name"],
             "distance": float(dist)
